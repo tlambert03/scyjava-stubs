@@ -1,4 +1,4 @@
-* scyjava-stubgen version:
+* scyjava-stubs version:
 * Python version:
 * Operating System:
 

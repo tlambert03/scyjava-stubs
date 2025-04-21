@@ -872,7 +872,7 @@ wheels = [
 ]
 
 [[package]]
-name = "scyjava-stubgen"
+name = "scyjava-stubs"
 source = { editable = "." }
 dependencies = [
     { name = "cjdk" },

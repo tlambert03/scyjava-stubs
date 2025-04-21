@@ -3,7 +3,7 @@
 from importlib.metadata import PackageNotFoundError, version
 
 try:
-    __version__ = version("scyjava-stubgen")
+    __version__ = version("scyjava-stubs")
 except PackageNotFoundError:
     __version__ = "uninstalled"
 

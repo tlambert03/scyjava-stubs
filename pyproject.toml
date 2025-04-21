@@ -14,7 +14,7 @@ sources = ["src"]
 
 # https://peps.python.org/pep-0621/
 [project]
-name = "scyjava-stubgen"
+name = "scyjava-stubs"
 dynamic = ["version"]
 description = "Type stub generator for maven artifacts"
 readme = "README.md"
@@ -48,8 +48,8 @@ dev = [
 ]
 
 [project.urls]
-homepage = "https://github.com/tlambert03/scyjava-stubgen"
-repository = "https://github.com/tlambert03/scyjava-stubgen"
+homepage = "https://github.com/tlambert03/scyjava-stubs"
+repository = "https://github.com/tlambert03/scyjava-stubs"
 
 [project.scripts]
 scyjava-stubgen = "scyjava_stubs.__main__:main"

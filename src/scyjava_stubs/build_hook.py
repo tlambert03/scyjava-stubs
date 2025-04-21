@@ -13,7 +13,7 @@ from ._genstubs import generate_stubs
 class CustomBuildHook(BuildHookInterface):
     """Custom build hook for generating Java stubs."""
 
-    PLUGIN_NAME = "scyjava-stubgen"
+    PLUGIN_NAME = "scyjava-stubs"
 
     def initialize(self, version: str, build_data: dict) -> None:
         """Initialize the build hook with the version and build data."""

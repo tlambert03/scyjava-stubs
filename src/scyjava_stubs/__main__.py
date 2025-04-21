@@ -1,13 +1,14 @@
-"""The scyjava-stubgen executable."""
+"""The scyjava-stubs executable."""
 
 import argparse
 import logging
+from pathlib import Path
 
 from ._genstubs import generate_stubs
 
 
 def main() -> None:
-    """The main entry point for the scyjava-stubgen executable."""
+    """The main entry point for the scyjava-stubs executable."""
     logging.basicConfig(level="INFO")
     parser = argparse.ArgumentParser(
         description="Generate Python Type Stubs for Java classes."
@@ -31,8 +32,8 @@ def main() -> None:
     parser.add_argument(
         "--output-dir",
         type=str,
-        default="stubs",
-        help="path to write stubs to (default: .)",
+        default=None,
+        help="path to write stubs to.",
     )
     parser.add_argument(
         "--convert-strings",
@@ -52,10 +53,17 @@ def main() -> None:
 
     args = parser.parse_args()
 
+    if args.output_dir is None:
+        try:
+            import scyjava_stubs
+            output_dir = Path(scyjava_stubs.__file__).parent / "modules"
+        except ImportError:
+            output_dir = "stubs"
+
     generate_stubs(
         endpoints=args.endpoints,
         prefixes=args.prefix,
-        output_dir=args.output_dir,
+        output_dir=output_dir,
         convert_strings=args.convert_strings,
         include_javadoc=args.with_javadoc,
     )
