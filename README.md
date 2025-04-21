@@ -24,5 +24,9 @@ then use them:
 from scyjava_stubs.modules.org.scijava.parsington import Function
 
 f = Function(1)
+print(f)
 print(f.isPrefix())
+
+from typing import reveal_type
+reveal_type(f)  # Runtime type is 'org.scijava.parsington.Function'
 ```
