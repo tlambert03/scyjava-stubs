@@ -116,7 +116,8 @@ def generate_stubs(
             includeJavadoc=include_javadoc,
         )
 
-    for stub in Path(output_dir).rglob("*.pyi"):
+    output_dir = Path(output_dir)
+    for stub in output_dir.rglob("*.pyi"):
         stub_ast = ast.parse(stub.read_text())
         members = {node.name for node in stub_ast.body if hasattr(node, "name")}
         if members == {"__module_protocol__"}:
@@ -126,23 +127,25 @@ def generate_stubs(
         real_import = stub.with_suffix(".py")
         endpoint_args = ", ".join(repr(x) for x in endpoints)
         real_import.write_text(INIT_TEMPLATE.format(endpoints=endpoint_args))
+    
+    ruff_check(output_dir.absolute())
 
-    ruff_check(output_dir)
 
-
-def ruff_check(output: str | Path) -> None:
+def ruff_check(output: Path) -> None:
+    py_files = [str(x) for x in output.rglob("*.py?")]
+    logger.debug("Running ruff check on generated stubs % s", py_files)
     if shutil.which("ruff"):
         subprocess.run(
             [
                 "ruff",
                 "check",
-                str(output),
+                *py_files,
                 "--fix-only",
                 "--unsafe-fixes",
                 "--select=E,W,F,I,UP,C4,B,RUF,TC,TID",
             ]
         )
-        subprocess.run(["ruff", "format", output])
+        subprocess.run(["ruff", "format", *py_files])
 
 
 def list_top_level_packages(jar_path: str) -> set[str]:
