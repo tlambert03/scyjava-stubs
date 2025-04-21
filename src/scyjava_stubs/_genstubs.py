@@ -134,7 +134,7 @@ def generate_stubs(
 
 def ruff_check(output: Path) -> None:
     py_files = [str(x) for x in chain(output.rglob("*.py"), output.rglob("*.pyi"))]
-    logger.info("Running ruff check on generated stubs % s", py_files)
+    logger.info("Running ruff check on generated stubs % s", str(output))
     if shutil.which("ruff"):
         subprocess.run(
             [
