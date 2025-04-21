@@ -6,6 +6,7 @@ import os
 import shutil
 import subprocess
 from importlib import import_module
+from itertools import chain
 from pathlib import Path, PurePath
 from typing import TYPE_CHECKING, Any
 from unittest.mock import patch
@@ -127,13 +128,13 @@ def generate_stubs(
         real_import = stub.with_suffix(".py")
         endpoint_args = ", ".join(repr(x) for x in endpoints)
         real_import.write_text(INIT_TEMPLATE.format(endpoints=endpoint_args))
-    
+
     ruff_check(output_dir.absolute())
 
 
 def ruff_check(output: Path) -> None:
-    py_files = [str(x) for x in output.rglob("*.py?")]
-    logger.debug("Running ruff check on generated stubs % s", py_files)
+    py_files = [str(x) for x in chain(output.rglob("*.py"), output.rglob("*.pyi"))]
+    logger.info("Running ruff check on generated stubs % s", py_files)
     if shutil.which("ruff"):
         subprocess.run(
             [

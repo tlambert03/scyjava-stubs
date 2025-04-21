@@ -56,6 +56,7 @@ def main() -> None:
     if args.output_dir is None:
         try:
             import scyjava_stubs
+
             output_dir = Path(scyjava_stubs.__file__).parent / "modules"
         except ImportError:
             output_dir = "stubs"
