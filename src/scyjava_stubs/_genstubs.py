@@ -101,8 +101,6 @@ def generate_stubs(
     # make sure we have a basic logger ?
     # scyjava.config.endpoints.append("org.slf4j:slf4j-simple")
 
-    logger.info(f"Using endpoints: {scyjava.config.endpoints!r}")
-
     vendor = os.environ.get("JAVA_VENDOR", DEFAULT_JAVA)
     version = os.environ.get("JAVA_VERSION", DEFAULT_JAVA_VERSION)
 
@@ -125,7 +123,9 @@ def generate_stubs(
                     _prefixes.update(list_top_level_packages(j))
 
         prefixes = sorted(_prefixes)
+        logger.info(f"Using endpoints: {scyjava.config.endpoints!r}")
         logger.info(f"Generating stubs for: {prefixes}")
+        logger.info(f"Writing stubs to: {output_dir}")
 
         jmodules = [import_module(prefix) for prefix in prefixes]
         generateJavaStubs(
