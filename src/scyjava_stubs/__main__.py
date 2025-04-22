@@ -1,8 +1,10 @@
 """The scyjava-stubs executable."""
 
 import argparse
-from ast import parse
+import importlib
+import importlib.util
 import logging
+import sys
 from pathlib import Path
 
 from ._genstubs import generate_stubs
@@ -24,17 +26,25 @@ def main() -> None:
         "--prefix",
         type=str,
         help="package prefixes to generate stubs for (e.g. org.myproject), "
-        "may be used multiple times",
+        "may be used multiple times. If not specified, prefixes are gleaned from the "
+        "downloaded artifacts.",
         action="append",
         default=[],
         metavar="PREFIX",
         dest="prefix",
     )
-    parser.add_argument(
+    path_group = parser.add_mutually_exclusive_group()
+    path_group.add_argument(
         "--output-dir",
         type=str,
         default=None,
-        help="path to write stubs to.",
+        help="Filesystem path to write stubs to.",
+    )
+    path_group.add_argument(
+        "--output-python-path",
+        type=str,
+        default=None,
+        help="Python path to write stubs to (e.g. 'scyjava_stubs.modules').",
     )
     parser.add_argument(
         "--convert-strings",
@@ -73,15 +83,14 @@ def main() -> None:
         "This leaves some folders as PEP420 implicit namespace folders.",
     )
 
+    if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit(1)
+
     args = parser.parse_args()
-
-    if args.output_dir is None:
-        try:
-            import scyjava_stubs
-
-            output_dir = Path(scyjava_stubs.__file__).parent / "modules"
-        except ImportError:
-            output_dir = Path("stubs")
+    output_dir = _get_ouput_dir(args.output_dir, args.output_python_path)
+    if not output_dir.exists():
+        output_dir.mkdir(parents=True, exist_ok=True)
 
     generate_stubs(
         endpoints=args.endpoints,
@@ -92,3 +101,52 @@ def main() -> None:
         add_runtime_imports=args.runtime_imports,
         remove_namespace_only_stubs=args.remove_namespace_only_stubs,
     )
+
+
+def _get_ouput_dir(output_dir: str | None, python_path: str | None) -> Path:
+    if out_dir := output_dir:
+        return Path(out_dir)
+    if pp := python_path:
+        return _glean_path(pp)
+    try:
+        import scyjava_stubs
+
+        return Path(scyjava_stubs.__file__).parent / "modules"
+    except ImportError:
+        return Path("stubs")
+
+
+def _glean_path(pp: str) -> Path:
+    try:
+        importlib.import_module(pp.split(".")[0])
+    except ModuleNotFoundError:
+        # the top level module doesn't exist:
+        raise ValueError(f"Module {pp} does not exist. Cannot install stubs there.")
+
+    try:
+        spec = importlib.util.find_spec(pp)
+    except ModuleNotFoundError as e:
+        # at least one of the middle levels doesn't exist:
+        raise NotImplementedError(f"Cannot install stubs to {pp}: {e}")
+
+    new_ns = None
+    if not spec:
+        # if we get here, it means everything but the last level exists:
+        parent, new_ns = pp.rsplit(".", 1)
+        spec = importlib.util.find_spec(parent)
+
+    if not spec:
+        # if we get here, it means the last level doesn't exist:
+        raise ValueError(f"Module {pp} does not exist. Cannot install stubs there.")
+
+    search_locations = spec.submodule_search_locations
+    if not spec.loader and search_locations:
+        # namespace package with submodules
+        return Path(search_locations[0])
+    if spec.origin:
+        return Path(spec.origin).parent
+    if new_ns and search_locations:
+        # namespace package with submodules
+        return Path(search_locations[0]) / new_ns
+
+    raise ValueError(f"Error finding module {pp}. Cannot install stubs there.")
