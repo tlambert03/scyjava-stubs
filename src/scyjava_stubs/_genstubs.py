@@ -137,12 +137,15 @@ def generate_stubs(
         )
 
     output_dir = Path(output_dir)
+    if add_runtime_imports:
+        logger.info("Adding runtime imports to generated stubs")
     for stub in output_dir.rglob("*.pyi"):
         stub_ast = ast.parse(stub.read_text())
         members = {node.name for node in stub_ast.body if hasattr(node, "name")}
         if members == {"__module_protocol__"}:
             # this is simply a module stub... no exports
             if remove_namespace_only_stubs:
+                logger.info("Removing namespace only stub %s", stub)
                 stub.unlink()
             continue
         if add_runtime_imports:

@@ -1,6 +1,7 @@
 """The scyjava-stubs executable."""
 
 import argparse
+from ast import parse
 import logging
 from pathlib import Path
 
@@ -51,6 +52,27 @@ def main() -> None:
         help="do not generate docstrings from JavaDoc where available",
     )
 
+    rt_group = parser.add_mutually_exclusive_group()
+    rt_group.add_argument(
+        "--runtime-imports",
+        dest="runtime_imports",
+        action="store_true",
+        default=True,
+        help="Add runtime imports to the generated stubs. ",
+    )
+    rt_group.add_argument(
+        "--no-runtime-imports", dest="runtime_imports", action="store_false"
+    )
+
+    parser.add_argument(
+        "--remove-namespace-only-stubs",
+        dest="remove_namespace_only_stubs",
+        action="store_true",
+        default=False,
+        help="Remove stubs that export no names beyond a single __module_protocol__. "
+        "This leaves some folders as PEP420 implicit namespace folders.",
+    )
+
     args = parser.parse_args()
 
     if args.output_dir is None:
@@ -67,4 +89,6 @@ def main() -> None:
         output_dir=output_dir,
         convert_strings=args.convert_strings,
         include_javadoc=args.with_javadoc,
+        add_runtime_imports=args.runtime_imports,
+        remove_namespace_only_stubs=args.remove_namespace_only_stubs,
     )
