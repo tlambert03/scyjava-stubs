@@ -158,19 +158,25 @@ def generate_stubs(
 
 def ruff_check(output: Path) -> None:
     py_files = [str(x) for x in chain(output.rglob("*.py"), output.rglob("*.pyi"))]
-    logger.info("Running ruff check on generated stubs % s", str(output))
     if shutil.which("ruff"):
+        logger.info(
+            "Running ruff check on %d generated stubs in % s",
+            len(py_files),
+            str(output),
+        )
         subprocess.run(
             [
                 "ruff",
                 "check",
                 *py_files,
+                "--quiet",
                 "--fix-only",
                 "--unsafe-fixes",
                 "--select=E,W,F,I,UP,C4,B,RUF,TC,TID",
             ]
         )
-        subprocess.run(["ruff", "format", *py_files])
+        logger.info("Running ruff format")
+        subprocess.run(["ruff", "format", *py_files, "--quiet"])
 
 
 def list_top_level_packages(jar_path: str) -> set[str]:
