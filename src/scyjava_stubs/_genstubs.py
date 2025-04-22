@@ -195,7 +195,7 @@ def list_top_level_packages(jar_path: str) -> set[str]:
             # If none of the already accepted roots is a parent of p, keep p
             if not any(root in p.parents for root in roots):
                 roots.add(p)
-        packages.update({str(p).replace("/", ".") for p in roots})
+        packages.update({str(p).replace(os.sep, ".") for p in roots})
 
     return packages
 
