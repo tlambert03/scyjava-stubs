@@ -59,7 +59,7 @@ def main() -> None:
 
             output_dir = Path(scyjava_stubs.__file__).parent / "modules"
         except ImportError:
-            output_dir = "stubs"
+            output_dir = Path("stubs")
 
     generate_stubs(
         endpoints=args.endpoints,

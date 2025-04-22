@@ -46,6 +46,8 @@ def generate_stubs(
     maven_sha512: str | None = None,
     convert_strings: bool = True,
     include_javadoc: bool = True,
+    add_runtime_imports: bool = True,
+    remove_namespace_only_stubs: bool = False,
 ) -> None:
     """Generate stubs for the given maven endpoints.
 
@@ -70,17 +72,34 @@ def generate_stubs(
         The SHA512 checksum of the Maven archive, if providing the URL.
     convert_strings : bool, optional
         Whether to cast Java strings to Python strings in the stubs. Defaults to True.
+        NOTE: This leads to type stubs that may not be strictly accurate at runtime.
+        The actual runtime type of strings is determined by whether jpype.startJVM is
+        called with the `convertStrings` argument set to True or False.  By setting
+        this `convert_strings` argument to true, the type stubs will be generated as if
+        `convertStrings` is set to True: that is, all string types will be listed as
+        `str` rather than `java.lang.String | str`.  This is a safer default (as `str`)
+        is a subtype of `java.lang.String`), but may lead to type errors in some cases.
     include_javadoc : bool, optional
         Whether to include Javadoc in the generated stubs. Defaults to True.
+    add_runtime_imports : bool, optional
+        Whether to add runtime imports to the generated stubs. Defaults to True.
+        This is useful if you want to use the stubs as a runtime package with type
+        safety.
+    remove_namespace_only_stubs : bool, optional
+        Whether to remove stubs that export no names beyond a single
+        `__module_protocol__`. This leaves some folders as PEP420 implicit namespace
+        folders. Defaults to False.  Setting this to `True` is useful if you want to
+        merge the generated stubs with other stubs in the same namespace.  Without this,
+        the `__init__.pyi` for any given module will be whatever whatever the *last*
+        stub generator wrote to it (and therefore inaccurate).
     """
-    import jpype
     import jpype.imports
 
     startJVM = jpype.startJVM
 
     scyjava.config.endpoints.extend(endpoints)
     # make sure we have a basic logger ?
-    scyjava.config.endpoints.append("org.slf4j:slf4j-simple")
+    # scyjava.config.endpoints.append("org.slf4j:slf4j-simple")
 
     logger.info(f"Using endpoints: {scyjava.config.endpoints!r}")
 
@@ -88,24 +107,24 @@ def generate_stubs(
     version = os.environ.get("JAVA_VERSION", DEFAULT_JAVA_VERSION)
 
     with cjdk.java_env(vendor=vendor, version=version):
-        _ensure_mvn(maven_url, maven_sha512)
-        scyjava.start_jvm()
 
         def _patched_start(*args: Any, **kwargs: Any) -> None:
             kwargs.setdefault("convertStrings", convert_strings)
             startJVM(*args, **kwargs)
 
         with patch.object(jpype, "startJVM", new=_patched_start):
+            _ensure_mvn(maven_url, maven_sha512)
             scyjava.start_jvm()
-        if not prefixes:
+
+        _prefixes = set(prefixes)
+        if not _prefixes:
             cp = jpype.getClassPath(env=False)
-            _prefixes = set()
             ep_artifacts = tuple(ep.split(":")[1] for ep in endpoints)
             for j in cp.split(os.pathsep):
                 if Path(j).name.startswith(ep_artifacts):
                     _prefixes.update(list_top_level_packages(j))
-            prefixes = sorted(_prefixes)
 
+        prefixes = sorted(_prefixes)
         logger.info(f"Generating stubs for: {prefixes}")
 
         jmodules = [import_module(prefix) for prefix in prefixes]
@@ -123,11 +142,13 @@ def generate_stubs(
         members = {node.name for node in stub_ast.body if hasattr(node, "name")}
         if members == {"__module_protocol__"}:
             # this is simply a module stub... no exports
+            if remove_namespace_only_stubs:
+                stub.unlink()
             continue
-
-        real_import = stub.with_suffix(".py")
-        endpoint_args = ", ".join(repr(x) for x in endpoints)
-        real_import.write_text(INIT_TEMPLATE.format(endpoints=endpoint_args))
+        if add_runtime_imports:
+            real_import = stub.with_suffix(".py")
+            endpoint_args = ", ".join(repr(x) for x in endpoints)
+            real_import.write_text(INIT_TEMPLATE.format(endpoints=endpoint_args))
 
     ruff_check(output_dir.absolute())
 
